@@ -109,8 +109,7 @@ void print_pos_stats(float* d_pos_stats, size_t LEN, uint64_t totalN) {
     
     // copy data to hist memory
     float* tmp_pos_stats = (float*)calloc(6*LEN, sizeof(float));
-    cudaMemcpy(tmp_pos_stats, d_pos_stats, 6*LEN*sizeof(float), cudaMemcpyDeviceToHost);
-    CudaCheckError();
+    CudaSafeCall( cudaMemcpy(tmp_pos_stats, d_pos_stats, 6*LEN*sizeof(float), cudaMemcpyDeviceToHost) );
     
     for (int b = 0; b < 6; b++) {
         printf("@%c", charset[b]);
@@ -243,14 +242,13 @@ int main(int argc, char** argv) {
     char* h_str = (char*)calloc(2*LEN*CHUNK_SZ,sizeof(char));
     
     char* d_str;       // sequence
-    cudaMalloc((void**)&d_str, 2*CHUNK_SZ*LEN*sizeof(char));
-    cudaMemset(d_str, 0, 2*CHUNK_SZ*LEN*sizeof(char));
-    CudaCheckError();
+    CudaSafeCall( cudaMalloc((void**)&d_str, 2*CHUNK_SZ*LEN*sizeof(char)) );
+    CudaSafeCall( cudaMemset(d_str, 0, 2*CHUNK_SZ*LEN*sizeof(char)) );
+
 
     float* d_pos_stats;  // pos stats    
-    cudaMalloc((void**)&d_pos_stats, 6*LEN*sizeof(float));
-    cudaMemset(d_pos_stats, 0, 6*LEN*sizeof(float));
-    CudaCheckError();
+    CudaSafeCall( cudaMalloc((void**)&d_pos_stats, 6*LEN*sizeof(float)) );
+    CudaSafeCall( cudaMemset(d_pos_stats, 0, 6*LEN*sizeof(float)) );
     
     // main loop to go arbitrary number of sequences
     bool done = false;
@@ -269,16 +267,14 @@ int main(int argc, char** argv) {
             }
         }
 
-        cudaMemcpy(d_str, h_str, 2*CHUNK_SZ*LEN*sizeof(char), cudaMemcpyHostToDevice);
-        CudaCheckError();
+        CudaSafeCall( cudaMemcpy(d_str, h_str, 2*CHUNK_SZ*LEN*sizeof(char), cudaMemcpyHostToDevice) );
     
         pos_stats<<<1024,1024,6*LEN*sizeof(float)>>>(d_str, d_pos_stats, LEN, CHUNK_SZ);
         CudaCheckError();
             
         // reset arrays
         memset(h_str, 0, 2*CHUNK_SZ*LEN*sizeof(char));
-        cudaMemset(d_str, 0, 2*CHUNK_SZ*LEN*sizeof(char));
-        CudaCheckError();
+        CudaSafeCall( cudaMemset(d_str, 0, 2*CHUNK_SZ*LEN*sizeof(char)) );
     }
     fprintf(stderr, "\n");
     
